@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuracion>
+	<path>/Users/fgnovo/workspace/python-apec/data</path>
+	<codigos_eliminar>
+		<item>SUELO</item>
+		<item>CO</item>
+		<item>FUT</item>
+		<item>PI</item>
+		<item>TEN</item>
+		<item>ETQ</item>
+		<item>ZBE</item>
+		<item>PRG</item>
+		<item>DEP</item>
+		<item>TRF</item>
+		<item>JD</item>
+		<item>YJD</item>
+		<item>ZD</item>
+		<item>RUINA</item>
+		<item>CONS</item>
+		<item>ZPAV</item>
+		<item>SILO</item>
+	</codigos_eliminar>
+	<media_planta>
+		<item>ENT</item>
+		<item>T</item>
+		<item>AT</item>
+	</media_planta>
+	<integrados>
+		<item>VOL</item>
+		<item>TZA</item>
+	</integrados>
+	<listado_archivos>
+		<concello nombre="Monterroso">
+			<avectorial>medianeras_monterroso_longitud.dbf</avectorial>
+			<acat>findat5897.032</acat>
+		</concello>
+	</listado_archivos>
+</configuracion>
+
+
