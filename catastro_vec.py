@@ -6,6 +6,7 @@ Created on Mon Mar  7 16:03:09 2016
 """
 
 import os,sys
+import logging
 import numpy as np
 import pandas as pd
 from simpledbf import Dbf5
@@ -49,6 +50,7 @@ def romano_a_arabigo(numero_romano):
         else:
             # Si no, la letra es invalida
             #print 'Valor invalido:', letra
+            logger.debug('Número no valido {}'.format(numero_romano))
             return -1
 
         # Si el valor anterior es mayor o igual que el
@@ -123,7 +125,7 @@ def procesar_altura(constru):
                 maxima_altura = 0
             #sumo los elemento 0.5            
             numeros_medios = lista_alturas.count(0.5)
-            maxima_altura += (numeros_medios/2)+1
+            maxima_altura += (numeros_medios/2)
         else:#no numeros validos altura
             maxima_altura = 0
         return(maxima_altura)
@@ -149,15 +151,20 @@ def configuracion():
     for ifile in root.findall('listado_archivos/concello'):  
         files.update({ifile.get('nombre'):(ifile.find('avectorial').text,ifile.find('acat').text)})
     return(path,codigos_a_eliminar,media_planta,integrados,files)
-        
-    
-    
 
+#************************************
+#CALCULAR DIFERENCIA DE ALTURAS
+#*************************************
+def dif_altura(x):
+   if x.apply(lambda x: x.count())[0] > 1 : 
+       return(x.sort_values('altura').altura.diff()) 
+   else:
+       return(x.altura) 
+    
 #***********************************************
 #Programa principal
 #***********************************************
-#codigos_a_eliminar = {}# {'SUELO','CO','FUT','PI','TEN','ETQ','ZBE','SUELO','PRG','DEP','TRF','JD','YJD','ZD','RUINA','CONS','ZPAV','SILO'}
-#El programa lee todos los archivos dbf en el directorio definido en path
+
 path,codigos_a_eliminar,media_planta,integrados,files = configuracion()#"/Users/fgnovo/workspace/python-apec/data/c"
 os.chdir(path)
 #(file for file in os.listdir(path) if os.path.isfile(file))
@@ -165,12 +172,25 @@ if not (os.path.exists("output_data")):
     os.mkdir("output_data")
 if not (os.path.exists("log_data")):
     os.mkdir("log_data")
-print('INICIANDO PROCESADO FICHERO DBF')
+#INICIO DE LOG
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+#create a file handler and console
+fh = logging.FileHandler('./log_data/catastro.log')
+fh.setLevel(logging.DEBUG)
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s-%(name)s-%(levelname)s-%(message)s')
+fh.setFormatter(formatter)
+#console.setFormatter(formatter)
+logger.addHandler(console)
+logger.addHandler(fh)
+logger.info('INICIANDO PROCESADO FICHERO DBF')
 for concello,nfile in files.iteritems():
-    print("Concello : {}".format(concello))
-    print("Iniciando el procesado del fichero: {}".format(nfile[0]))
+    logger.info("Concello : {}".format(concello))
+    logger.info("Iniciando el procesado del fichero: {}".format(nfile[0]))
     #abre fichero dbf y lo convierte a pandas
-    dbf = Dbf5(nfile[0],codec = 'utf-8') 
+    dbf = Dbf5('./data_vec/'+nfile[0],codec = 'utf-8') 
     df = dbf.to_dataframe()
     #cambio el nombre de la primera columna por FID
     df=df.rename(columns = {df.columns[0]:'FID'})
@@ -181,16 +201,17 @@ for concello,nfile in files.iteritems():
     df.altura = 0.0
     index = 0
     for alturas in df.CONSTRU:
-       a =  procesar_altura(alturas)
-       #print("Altura: {}:".format(a))
-       #print("Alturas string: {}:".format(alturas))
-       df.ix[index,'altura'] = a
-       index += 1
-       if (index % 500 == 0):
-                print(" {} Registros procesados".format(index))  
+        logger.debug('Iniciando procesado línea {}'.format(index))
+        a =  procesar_altura(alturas)
+        logger.debug("Altura: {}:".format(a))
+        logger.debug("Alturas string: {}:".format(alturas))
+        df.ix[index,'altura'] = a
+        index += 1
+        if (index % 500 == 0):
+            logger.info(" {} Registros procesados".format(index))  
     df_dif = df
     df_dif = df_dif[df_dif['altura'] > 0]
-    df_dif = df.groupby('FID').apply(lambda x: x.sort_values('altura').altura.diff())
+    df_dif = df.groupby('FID').apply(dif_altura)
     df_dif = df_dif.reset_index()
     df_dif = df_dif[['level_1','altura']]
     df_dif.columns = ['Pindex','dif_altura']
@@ -200,9 +221,11 @@ for concello,nfile in files.iteritems():
     df_sup_pol = pd.DataFrame(df2.groupby('FID_CONSTR').area_fachada.sum())
     df_sup_pol.rename(columns={'area_fachada':'afachada_pol'}, inplace=True)
     df2 = pd.merge(df2,df_sup_pol,left_on='FID_CONSTR',right_index = True,how='left')
-    df_sup_ref = pd.DataFrame(df2.groupby('ref_cat').area_fachada.sum())
-    df_supr_ref = ['Pindex2','dif_altura']
-    df2 = pd.merge(df2,df_sup_pol,left_on='ref_cat',right_index = True,how='left')
-    # dfcat = cat.extraer_inf_cat(nfile[1])
-print('SCRIPT FINALIZADO')
+    logger.info("Iniciando extracción fichero .cat")
+    dfcat = cat.extraer_inf_cat('./data_cat/'+nfile[1])
+    logger.info("Uniendo información vectorial y .cat")
+    df_out=pd.merge(df2,dfcat,left_on="ref_catastral",right_index = True, how='left')
+    df_out.to_csv('salida_csv.csv')
+print('FINAL')
+logger.info('SCRIPT FINALIZADO')
     

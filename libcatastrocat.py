@@ -1,8 +1,8 @@
 
 import struct
-import os,sys
 import numpy as np
 import pandas as pd
+from scipy.stats.mstats import mode
 
 
 # This function transform a string in an array, has two parameters: 
@@ -61,6 +61,14 @@ def insert_line_df(fields,ctype,df):
         data = pd.DataFrame({"ref_catastral":[fields[0]],"cuc":[fields[1]],"floor":[fields[2]],"purpose":[fields[3]],"t_reform":[fields[4]],
                     "year_reform":[fields[5]],"tipology":[fields[6]],"preservation":[fields[7]]})
     return(df.append(data))
+
+def select_tipology(x):
+    if x['tipology'].min()==1:
+        x['tipology'] = 1
+    else:
+        x['tipology'] = mode(x['tipology'])[0][0]
+    return(x.iloc[0])
+
     
 def extraer_inf_cat(file):
     df13 = pd.DataFrame()
@@ -88,13 +96,10 @@ def extraer_inf_cat(file):
                 #print ("Type :{0} - {1}".format(ctype,fields))
             if (i % 500 == 0):
                 print(" {} Registros procesados".format(i))
-    df13.to_csv('log_data/df13',sep=',')
-    df14.to_csv('log_data/df14',sep=',')
+
     df = pd.merge(df13,df14,on=['cuc','ref_catastral'],how="right")
-    df['height'] = 0
-    #select only values purpose == V and select de max floor by ref_catastral
-    df_v = df[df.purpose == 'V  ']
-    df_v.groupby('ref_catastral')
+    dfcat = df.groupby('ref_catastral').apply(select_tipology)
+    return(dfcat[['year_const','preservation','tipology','year_reform']])
     
     
 

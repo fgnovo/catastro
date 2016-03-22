@@ -7,32 +7,21 @@ Created on Sat Mar  5 19:33:17 2016
 import os
 import numpy as np
 import pandas as pd
+from scipy.stats.mstats import mode
 
-path = "/Users/fgnovo/Dropbox/apec"
+
+def select_tipology(x):
+    if x['tipology'].min()==1:
+        x['tipology'] = 1
+    else:
+        x['tipology'] = mode(x['tipology'])[0][0]
+    return(x.iloc[0])
+
+path = "/Users/fgnovo/workspace/python-apec/data/log_data"
 os.chdir(path)
-df13=pd.read_csv('df13',sep=',')
-df14=pd.read_csv('df14',sep=',')
+df13=pd.read_csv('df13Monterroso',sep=',')
+df14=pd.read_csv('df14Monterroso',sep=',')
 #********************************
-#a = pd.unique(df13.key.ravel())
-#b = pd.unique(df14.key.ravel())
-#c = np.in1d(a,b)
-#print(len(a))
-#print(len(b))
-#print(np.where(c==False))
-#print(a[np.where(c==False)])
 df = pd.merge(df13,df14,on=['cuc','ref_catastral'],how="right")
-df['height'] = 0
-#select only values purpose == V and select de max floor by ref_catastral
-df_v = df[df.purpose == 'V  ']
-mask =df_v.groupby(['cuc','ref_catastral']).agg('idxmax')
-df_vh = df.loc[mask['floor']].reset_index()
-df_vh.height =df_vh.floor+1 
-df_vh = df_vh[['cuc','ref_catastral','height']]
-df = pd.merge(df,df_vh,on=['cuc','ref_catastral'],how='left')
-df = df.fillna(0)
-df['height'] = df['height_x']+df['height_y']
-df.height = df.height.astype(int)
-df = df[['cuc','ref_catastral','year_const','floor','preservation','purpose','t_reform','tipology','year_reform','height']]
-print(df.dtypes)
-print(df.head())
-print('x')
+dfcat = df.groupby('ref_catastral').apply(select_tipology)
+print('FIN')
