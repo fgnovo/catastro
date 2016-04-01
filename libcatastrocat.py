@@ -15,7 +15,7 @@ def line_array(line,ctype):
     if ctype == 13:
         fieldwidths_type = (-28,14,4,-247,4)
     else :
-        fieldwidths_type = (-28,14,-10,4,-6,3,-3,3,1,4,-26,4,1)
+        fieldwidths_type = (-28,14,-10,4,-6,3,-3,3,1,4,-26,2,2,1)
     fmtstring = ' '.join('{}{}'.format(abs(fw), 'x' if fw < 0 else 's') for fw in fieldwidths_type)
     fieldstruct = struct.Struct(fmtstring)
     parse = fieldstruct.unpack_from
@@ -59,14 +59,14 @@ def insert_line_df(fields,ctype,df):
         data = pd.DataFrame({"ref_catastral":[fields[0]],"cuc":[fields[1]],"year_const":[fields[2]]})
     else:
         data = pd.DataFrame({"ref_catastral":[fields[0]],"cuc":[fields[1]],"floor":[fields[2]],"purpose":[fields[3]],"t_reform":[fields[4]],
-                    "year_reform":[fields[5]],"tipology":[fields[6]],"preservation":[fields[7]]})
+                    "year_reform":[fields[5]],"tipology":[int(fields[6])],"subtipology":[fields[7]],"preservation":[fields[8]]})
     return(df.append(data))
 
 def select_tipology(x):
     if x['tipology'].min()==1:
         x['tipology'] = 1
     else:
-        x['tipology'] = mode(x['tipology'])[0][0]
+        x['tipology'] = int(mode(x['tipology'])[0][0])
     return(x.iloc[0])
 
     
@@ -98,8 +98,10 @@ def extraer_inf_cat(file):
                 print(" {} Registros procesados".format(i))
 
     df = pd.merge(df13,df14,on=['cuc','ref_catastral'],how="right")
+    df.to_csv("salida1.csv")
     dfcat = df.groupby('ref_catastral').apply(select_tipology)
-    return(dfcat[['year_const','preservation','tipology','year_reform']])
+    dfcat[['year_const','preservation','tipology','subtipology','year_reform']].to_csv("salida2.csv")
+    return(dfcat[['year_const','preservation','tipology','subtipology','year_reform']])
     
     
 
