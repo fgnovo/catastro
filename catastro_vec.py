@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from simpledbf import Dbf5
 import xml.etree.ElementTree as ET
-import libcatastrocat as cat
+import libcatastrocat2 as cat
 
 #**************************************************************
 #FUNCIÓN PARA PASAR NÚMEROS ROMANOS A ENTEROS
@@ -211,12 +211,14 @@ for concello,nfile in files.iteritems():
             logger.info(" {} Registros procesados".format(index))  
     df_dif = df
     df_dif = df_dif[df_dif['altura'] > 0]
+    logger.info("Calculando diferencia de alturas")
     df_dif = df.groupby('FID').apply(dif_altura)
     df_dif = df_dif.reset_index()
     df_dif = df_dif[['level_1','altura']]
     df_dif.columns = ['Pindex','dif_altura']
+    logger.info("Unniendo diferencia de alturas a la tabla")
     df2 = pd.merge(df,df_dif,left_index=True,right_on='Pindex',how='left')
-    df2 = df2.fillna(0.0)
+    df2 = df2.fillna(0)
     df2['area_fachada'] = df2['longitud']*3.0*df2['dif_altura']
     df2['fachada_total'] = df2['perimetro']*3.0*df2['altura']
     df_sup_pol = pd.DataFrame(df2.groupby('FID_CONSTR').area_fachada.sum())
@@ -229,8 +231,15 @@ for concello,nfile in files.iteritems():
     dfcat = cat.extraer_inf_cat('./data_cat/'+nfile[1])
     logger.info("Uniendo información vectorial y .cat")
     df_out=pd.merge(df2,dfcat,left_on="ref_cat",right_index = True, how='left')
-    df_out = df_out.fillna(0.0)
+    df_out = df_out.fillna(0)
     df_out = df_out[['FID_CONSTR','altura','afachada_pol','fachada_total','area_medianeras','year_const','preservation','tipology','year_reform']]
+    df_out.altura = df_out.altura.astype(int)
+    df_out.year_const = df_out.year_const.astype(int)
+    df_out.preservation = df_out.preservation.astype(int)
+    df_out.tipology = df_out.tipology.astype(int)
+    df_out.year_reform = df_out.year_reform.astype(int)
+
+    df_out = df_out.round({'afachada_pol':2,'fachada_total':2,'area_medianeras':2})
     df_out.to_csv('./output_data/'+concello+'.csv')
 print('FINAL')
 logger.info('SCRIPT FINALIZADO')

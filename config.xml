@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuracion>
-	<path>/Users/fgnovo/workspace/python-apec/data</path>
+	<path>/Users/fgnovo/workspace/python-apec/catastro/data</path>
 	<codigos_eliminar>
 		<item>SUELO</item>
 		<item>CO</item>

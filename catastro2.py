@@ -17,7 +17,7 @@ def select_tipology(x):
         x['tipology'] = mode(x['tipology'])[0][0]
     return(x.iloc[0])
 
-path = "/Users/fgnovo/workspace/python-apec/data/log_data"
+path = "/Users/fgnovo/workspace/python-apec/catastro/data/log_data"
 os.chdir(path)
 df13=pd.read_csv('df13Monterroso',sep=',')
 df14=pd.read_csv('df14Monterroso',sep=',')
