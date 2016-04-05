@@ -1,6 +1,6 @@
 
 import struct
-import numpy as np
+import logging
 import pandas as pd
 from scipy.stats.mstats import mode
 
@@ -76,14 +76,15 @@ def extraer_inf_cat(file):
     data13 = []
     data14 = []
     f = open(file,'r')
-    print "File opened: {0}".format(f.name)
+    module_logger = logging.getLogger('catastro.libcatastro')
+    module_logger.info("File opened: {0}".format(f.name))
     # read all lines length 1000
     i = 0
     while True:
         ctype = f.read(2)
         line = f.read(998)
         if not line:
-            print "File {} finished".format(file)
+            module_logger.info("File {} finished".format(file))
             f.close()
             break
         else:
@@ -105,7 +106,7 @@ def extraer_inf_cat(file):
                             data14.append(fields)
                 #print ("Type :{0} - {1}".format(ctype,fields))
             if (i % 500 == 0):
-                print(" {} Registros procesados".format(i))
+                module_logger.info(" {} Registros procesados".format(i))
 
     df13 = pd.DataFrame(data13)
     df13.columns = ["ref_catastral","cuc","year_const"]

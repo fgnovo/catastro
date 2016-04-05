@@ -5,9 +5,9 @@ Created on Mon Mar  7 16:03:09 2016
 @author: fgnovo
 """
 
-import os,sys
+import os
 import logging
-import numpy as np
+import logging.config
 import pandas as pd
 from simpledbf import Dbf5
 import xml.etree.ElementTree as ET
@@ -156,11 +156,28 @@ def configuracion():
 #CALCULAR DIFERENCIA DE ALTURAS
 #*************************************
 def dif_altura(x):
-   if x.apply(lambda x: x.count())[0] > 1 : 
+   a =  x.count().FID_CONSTR
+   if a > 1 : 
        return(x.sort_values('altura').altura.diff()) 
    else:
        return(x.altura) 
+
+#*************************************
+#ELIMINO LOS POLIGONOS AISLADOS CON USO VIVIENDA CON MÁS DE UN POLÍGONO POR REF. CATASTRAL 
+#de altura = 1 y con algún polígono de altura>1
+#**************************************
+def tipo_zero(x):
+    if (x.altura == 1) and (x.area_medianeras<0.001):
+        x.tipology = 0
+        logger.debug('Eliminar aislado{}:'.format(x))
+    return(x)
     
+def del_aislados(x):
+    if ((x.count().FID_CONSTR> 1) and (x.altura.max() >1)):
+        return(x.apply(tipo_zero,axis = 1))
+    else:
+        return(x)
+        
 #***********************************************
 #Programa principal
 #***********************************************
@@ -173,7 +190,7 @@ if not (os.path.exists("output_data")):
 if not (os.path.exists("log_data")):
     os.mkdir("log_data")
 #INICIO DE LOG
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('catastro')
 logger.setLevel(logging.DEBUG)
 #create a file handler and console
 fh = logging.FileHandler('./log_data/catastro.log')
@@ -216,7 +233,7 @@ for concello,nfile in files.iteritems():
     df_dif = df_dif.reset_index()
     df_dif = df_dif[['level_1','altura']]
     df_dif.columns = ['Pindex','dif_altura']
-    logger.info("Unniendo diferencia de alturas a la tabla")
+    logger.info("Uniendo diferencia de alturas a la tabla")
     df2 = pd.merge(df,df_dif,left_index=True,right_on='Pindex',how='left')
     df2 = df2.fillna(0)
     df2['area_fachada'] = df2['longitud']*3.0*df2['dif_altura']
@@ -232,15 +249,24 @@ for concello,nfile in files.iteritems():
     logger.info("Uniendo información vectorial y .cat")
     df_out=pd.merge(df2,dfcat,left_on="ref_cat",right_index = True, how='left')
     df_out = df_out.fillna(0)
-    df_out = df_out[['FID_CONSTR','altura','afachada_pol','fachada_total','area_medianeras','year_const','preservation','tipology','year_reform']]
+    df_out = df_out[['FID_CONSTR','altura','afachada_pol','fachada_total','area_medianeras','year_const','preservation','tipology','year_reform','ref_cat']]
     df_out.altura = df_out.altura.astype(int)
     df_out.year_const = df_out.year_const.astype(int)
     df_out.preservation = df_out.preservation.astype(int)
     df_out.tipology = df_out.tipology.astype(int)
     df_out.year_reform = df_out.year_reform.astype(int)
-
     df_out = df_out.round({'afachada_pol':2,'fachada_total':2,'area_medianeras':2})
-    df_out.to_csv('./output_data/'+concello+'.csv')
-print('FINAL')
+    #Elimino los poligonos con area_medianeras <0,01 y altura  = 1 y que sea más de un poligono 
+    #por ref_cat,tenga uso vivienda y al menos un poligono altura>1
+    logger.info('Elimino los poligonos vivienda aislados')  
+    #agrupo por referencia catastral y creo un df con index ref_cat
+    #FID_CONST y tipolgy == 0 si es a eliminar
+    df_out = df_out.groupby('ref_cat').apply(del_aislados)  
+    df_out = df_out.reset_index()
+    df_out = df_out[df_out.tipology > 0]
+    df_out.to_csv('./output_data/'+concello+'_total.csv')
+    #Filtro uso vivienda
+    df_out = df_out[df_out['tipology']<2]
+    df_out.to_csv('./output_data/'+concello+'_vivienda.csv')
 logger.info('SCRIPT FINALIZADO')
     
