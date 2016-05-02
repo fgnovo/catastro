@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Mar  7 16:03:09 2016
-
-@author: fgnovo
+Company: Fundación Laboral de la Construcción
+Versión: 1.0
+Author: Fernando García Novo
+@author: fgnovo@fundacionlaboral.org
 """
 
 import os

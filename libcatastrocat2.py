@@ -1,4 +1,10 @@
-
+"""
+Created on Mon Mar  7 16:03:09 2016
+Company: Fundación Laboral de la Construcción
+Versión: 1.0
+Author: Fernando García Novo
+@author: fgnovo@fundacionlaboral.org
+"""
 import struct
 import logging
 import pandas as pd
