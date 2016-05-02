@@ -156,12 +156,10 @@ def configuracion():
 #CALCULAR DIFERENCIA DE ALTURAS
 #*************************************
 def dif_altura(x):
-   a =  x.count().FID_CONSTR
-   if a > 1 : 
-       return(x.sort_values('altura').altura.diff()) 
-   else:
-       return(x.altura) 
-
+    x['dif_altura'] =x.sort_values('altura').altura.diff()
+    if x.ref_cat.min() == x.ref_cat.max():
+        x['interior'] = x.altura.min()
+    return(x)
 #*************************************
 #ELIMINO LOS POLIGONOS AISLADOS CON USO VIVIENDA CON MÁS DE UN POLÍGONO POR REF. CATASTRAL 
 #de altura = 1 y con algún polígono de altura>1
@@ -225,37 +223,46 @@ for concello,nfile in files.iteritems():
         df.ix[index,'altura'] = a
         index += 1
         if (index % 500 == 0):
-            logger.info(" {} Registros procesados".format(index))  
+            logger.info(" {} Registros procesados".format(index))      
+    #elimino los poligonos sin altura
     df_dif = df
     df_dif = df_dif[df_dif['altura'] > 0]
+    #me quedo con los campos necesarios
+    df_dif = df_dif[['FID','FID_CONSTR','ref_cat','perimetro','longitud','altura']]
     logger.info("Calculando diferencia de alturas")
-    df_dif = df.groupby('FID').apply(dif_altura)
-    df_dif = df_dif.reset_index()
-    df_dif = df_dif[['level_1','altura']]
-    df_dif.columns = ['Pindex','dif_altura']
-    logger.info("Uniendo diferencia de alturas a la tabla")
-    df2 = pd.merge(df,df_dif,left_index=True,right_on='Pindex',how='left')
-    df2 = df2.fillna(0)
-    df2['area_fachada'] = df2['longitud']*3.0*df2['dif_altura']
-    df2['fachada_total'] = df2['perimetro']*3.0*df2['altura']
-    df_sup_pol = pd.DataFrame(df2.groupby('FID_CONSTR').area_fachada.sum())
-    df_sup_pol.rename(columns={'area_fachada':'afachada_pol'}, inplace=True)
-    df2 = pd.merge(df2,df_sup_pol,left_on='FID_CONSTR',right_index = True,how='left')
-    df2['area_medianeras'] = df2['fachada_total']-df2['afachada_pol']
-    df2 = df2[['FID_CONSTR','ref_cat','altura','afachada_pol','fachada_total','area_medianeras']]
-    df2 = df2.drop_duplicates(subset='FID_CONSTR')
+    #presupongo con no es medianera, es decir es fachada
+    df_dif['dif_altura'] = df_dif.altura
+    df_dif['interior'] = 0
+    #separo las medianeras de las no medianeras
+    duplicated = df_dif.FID.duplicated(keep = False)
+    df_dif_duplicated = df_dif[duplicated]
+    df_dif_not_duplicated = df_dif[~duplicated]
+    #calculo de las medianeras que parte es medianera y que parte es fachada
+    #detecto las medianeras interiores, sumando su supuerficie en campo interior
+    df_dif_duplicated = df_dif_duplicated.groupby('FID').apply(dif_altura)
+    df_dif = pd.concat([df_dif_not_duplicated,df_dif_duplicated])
+    logger.info("Calculando areas de medianeras y fachada")
+    df_dif = df_dif.fillna(0)
+    df_dif['area_fachada'] = df_dif['longitud']*3.0*df_dif['dif_altura']
+    df_dif['area_interior'] = df_dif['longitud']*3.0*df_dif['interior']
+    df_areas = df_dif.groupby('FID_CONSTR').sum()[['longitud','area_fachada','area_interior']]
+    df_dif=df_dif.drop(['area_fachada','area_interior','longitud'],axis=1)
+    df_dif = pd.merge(df_dif,df_areas,left_on='FID_CONSTR',right_index = True,how='left')
+    df_dif = df_dif.drop_duplicates(subset='FID_CONSTR')    
+    df_dif['fachada_total'] = df_dif['longitud']*3.0*df_dif['altura']
+    df_dif['area_medianeras'] = df_dif['fachada_total']-df_dif['area_fachada']-df_dif['area_interior']
     logger.info("Iniciando extracción fichero .cat")
     dfcat = cat.extraer_inf_cat('./data_cat/'+nfile[1])
     logger.info("Uniendo información vectorial y .cat")
-    df_out=pd.merge(df2,dfcat,left_on="ref_cat",right_index = True, how='left')
+    df_out=pd.merge(df_dif,dfcat,left_on="ref_cat",right_index = True, how='left')
     df_out = df_out.fillna(0)
-    df_out = df_out[['FID_CONSTR','altura','afachada_pol','fachada_total','area_medianeras','year_const','preservation','tipology','year_reform','ref_cat']]
+    df_out = df_out[['FID_CONSTR','altura','area_fachada','fachada_total','area_medianeras','area_interior','year_const','preservation','tipology','year_reform','ref_cat']]
     df_out.altura = df_out.altura.astype(int)
     df_out.year_const = df_out.year_const.astype(int)
     df_out.preservation = df_out.preservation.astype(int)
     df_out.tipology = df_out.tipology.astype(int)
     df_out.year_reform = df_out.year_reform.astype(int)
-    df_out = df_out.round({'afachada_pol':2,'fachada_total':2,'area_medianeras':2})
+    df_out = df_out.round({'area_fachada':2,'fachada_total':2,'area_medianeras':2,'area_interior':2})
     #Elimino los poligonos con area_medianeras <0,01 y altura  = 1 y que sea más de un poligono 
     #por ref_cat,tenga uso vivienda y al menos un poligono altura>1
     logger.info('Elimino los poligonos vivienda aislados')  
