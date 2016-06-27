@@ -273,9 +273,10 @@ for concello,nfile in files.iteritems():
     df_out = df_out.groupby('ref_cat').apply(del_aislados)  
     df_out = df_out.reset_index()
     df_out = df_out[df_out.tipology > 0]
-    df_out.to_csv('./output_data/'+concello+'_total.csv')
+    df_out = df_out.drop(['index'],axis = 1)
+    df_out.to_csv('./output_data/'+concello+'_total.csv', index = False)
     #Filtro uso vivienda
     df_out = df_out[df_out['tipology']<2]
-    df_out.to_csv('./output_data/'+concello+'_vivienda.csv')
+    df_out.to_csv('./output_data/'+concello+'_vivienda.csv',index = False)
 logger.info('SCRIPT FINALIZADO')
     

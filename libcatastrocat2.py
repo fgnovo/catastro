@@ -1,8 +1,8 @@
 """
 Created on Mon Mar  7 16:03:09 2016
-Company: Fundación Laboral de la Construcción
-Versión: 1.0
-Author: Fernando García Novo
+Company: Fundacion Laboral de la Construccion
+Version: 1.0
+Author: Fernando Garcia Novo
 @author: fgnovo@fundacionlaboral.org
 """
 import struct
